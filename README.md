@@ -7,6 +7,7 @@
 | 파일 | 내용 |
 |---|---|
 | `따라하기.md` | 설치·실행 명령을 순서대로(영상 찍은 날 기준, 공식 문서 원문) |
+| `체크리스트.md` | 놓치면 안 되는 할 일을 순서대로(공식 안내 원문 링크) |
 | `실측.csv` / `실측.md` | 우리 맥·우분투에서 직접 잰 속도·메모리·한국어 정확도 |
 | `라이선스.md` | 앱·모델을 회사나 돈 버는 데 써도 되는지(원문 링크·확인 날짜) |
 | 그 편에 따라 하나 | 프롬프트 모음 / ComfyUI 워크플로 json / 오류 해결 표 / 예제 파일 |
@@ -21,6 +22,7 @@
 |---|---|---|
 | 34화 CLI-Anything | [`ep034_cli-anything/`](ep034_cli-anything/) | [쇼츠](https://youtube.com/shorts/RelYPrsTgb8) |
 | 37화 RemoveMacAI | [`ep037_remove-mac-ai/`](ep037_remove-mac-ai/) | (올라가면 주소 추가) |
+| 42화 클로드 디자인 종료 | [`ep042_claude-design-backup/`](ep042_claude-design-backup/) | (올라가면 주소 추가) |
 
 ## 라이선스
 - 코드(json·스크립트): [MIT](LICENSE)
