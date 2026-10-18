@@ -23,7 +23,7 @@
 | 34화 CLI-Anything | [`ep034_cli-anything/`](ep034_cli-anything/) | [쇼츠](https://youtube.com/shorts/RelYPrsTgb8) |
 | 37화 RemoveMacAI | [`ep037_remove-mac-ai/`](ep037_remove-mac-ai/) | (올라가면 주소 추가) |
 | 42화 클로드 디자인 종료 | [`ep042_claude-design-backup/`](ep042_claude-design-backup/) | (올라가면 주소 추가) |
-| 44화 자막 효과 10종 무료 | [`ep044_free-motion-pack/`](ep044_free-motion-pack/) | (올라가면 주소 추가) |
+| 44화 자막 효과 10종 무료 | [`ep044_free-motion-pack/`](ep044_free-motion-pack/) | [쇼츠](https://youtube.com/shorts/_odMhLCdAc0) |
 
 ## 라이선스
 - 코드(json·스크립트): [MIT](LICENSE)
