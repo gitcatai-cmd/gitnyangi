@@ -1,0 +1,321 @@
+<!doctype html>
+<!-- 화살표 콜아웃 — 가리킬 곳에 조준 모서리가 회전하며 조여 들고 음파 고리가 퍼지며, 빛나는 그러데이션 화살표가 빛 머리를 달고 그어지고 이름표 스티커가 튕겨 나온다 -->
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"label","type":"string","label":"이름표 글","default":"여기를 누르세요"},
+    {"id":"targetX","type":"number","label":"가리킬 곳 가로 위치 (%)","default":68,"min":0,"max":100,"step":1,"unit":"%"},
+    {"id":"targetY","type":"number","label":"가리킬 곳 세로 위치 (%)","default":36,"min":0,"max":100,"step":1,"unit":"%"},
+    {"id":"side","type":"enum","label":"이름표 놓을 쪽","default":"left","options":[{"value":"left","label":"가리킬 곳의 왼쪽"},{"value":"right","label":"가리킬 곳의 오른쪽"}]},
+    {"id":"accent","type":"color","label":"이름표·화살표 색 1","default":"#FFE21F"},
+    {"id":"accent2","type":"color","label":"화살표 색 2","default":"#FF2D87"},
+    {"id":"accent3","type":"color","label":"조준 고리 색","default":"#2BE4FF"},
+    {"id":"ink","type":"color","label":"글자·테두리 색","default":"#0A0612"},
+    {"id":"exitAt","type":"number","label":"퇴장 시작 (초, 전체 길이-0.7 이하)","default":4.25,"min":1.5,"max":60,"step":0.05,"unit":"s"},
+    {"id":"backdrop","type":"enum","label":"배경","default":"none","options":[{"value":"none","label":"투명"},{"value":"green","label":"초록 화면"},{"value":"preview","label":"미리보기용 회색"}]}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Neon Arrow Callout</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+/* 무료 모션그래픽 팩 v2 공통 스타일 — 글꼴·배경·외곽선·광채 같은 10종 공통 부품 (make_templates.sh가 각 index.html에 넣는다) */
+@font-face { font-family: "Pretendard"; src: url("assets/fonts/PretendardVariable.woff2") format("woff2"); font-weight: 45 920; }
+@font-face { font-family: "Black Han Sans"; src: url("assets/fonts/BlackHanSans-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Anton"; src: url("assets/fonts/Anton-Regular.ttf") format("truetype"); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+#root {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  font-family: "Pretendard", sans-serif; -webkit-font-smoothing: antialiased;
+  /* 큰 제목 글꼴: 한글은 Black Han Sans, 영어만 있으면 Anton(대문자) */
+  --disp: "Black Han Sans", "Pretendard", sans-serif;
+  --disp-case: none; --disp-track: -0.01em;
+}
+#root.latin { --disp: "Anton", "Black Han Sans", sans-serif; --disp-case: uppercase; --disp-track: 0.01em; }
+#backdrop { position: absolute; inset: 0; }
+#backdrop.green { background: #00ff00; }
+#backdrop.preview { background: radial-gradient(120% 90% at 30% 20%, #8b8f99 0%, #5d626c 45%, #3a3d44 100%); }
+#stage, #cam { position: absolute; inset: 0; }
+.disp { font-family: var(--disp); text-transform: var(--disp-case); letter-spacing: var(--disp-track); }
+/* 굵은 검은 외곽선 + 부드러운 그림자: 밝은 화면·어두운 화면 어디서나 읽히게 */
+.outline { -webkit-text-stroke: var(--sw, 12px) var(--ink, #0A0612); paint-order: stroke fill; }
+.lift { filter: drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 14px 26px rgba(0,0,0,.45)); }
+/* 반짝이·불꽃 조각 */
+.fx { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.spark { position: absolute; left: 0; top: 0; border-radius: 99px; }
+.star { position: absolute; left: 0; top: 0; }
+.star::before, .star::after { content: ""; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 99px; transform: translate(-50%, -50%); box-shadow: 0 0 12px currentColor; }
+.star::before { width: 100%; height: 18%; }
+.star::after { width: 18%; height: 100%; }
+.ring { position: absolute; left: 0; top: 0; border-radius: 50%; border-style: solid; }
+/* 무지개빛 글자: 아래는 검은 외곽선 글자, 위에 같은 글자를 그러데이션으로 한 겹 더 얹는다(--gp로 빛이 흐른다) */
+.gt { position: relative; }
+.gt::after {
+  content: attr(data-t); position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: inherit; white-space: nowrap;
+  -webkit-text-stroke: 0; color: transparent;
+  background-image: var(--grad); background-size: 300% 100%; background-position: var(--gp, 0%) 50%;
+  -webkit-background-clip: text; background-clip: text;
+}
+/* 초록 화면 모드(backdrop=green): 반투명 빛 번짐·흐린 그림자·빛 테두리 후광·충격파 고리를 끈다
+   → 가장자리가 딱 떨어져 크로마 키로 깨끗하게 빠진다. 투명 MOV·WebM(backdrop=none)은 그대로 다 빛난다 */
+#root:has(#backdrop.green) *, #root:has(#backdrop.green) *::before, #root:has(#backdrop.green) *::after {
+  box-shadow: none !important; text-shadow: none !important;
+}
+#root:has(#backdrop.green) *:not(.pan) { filter: none !important; }
+#root:has(#backdrop.green) .ring, #root:has(#backdrop.green) #halo, #root:has(#backdrop.green) .sonar { display: none !important; }
+
+      #svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+      .shO { fill: none; stroke: var(--ink); stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+      .shC { fill: none; stroke: url(#ag); stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
+      #glowG { filter: drop-shadow(0 0 14px var(--accent2)) drop-shadow(0 0 4px var(--accent)); }
+      .br { fill: none; stroke: var(--accent3); stroke-width: 12; stroke-linecap: round; }
+      .brO { fill: none; stroke: var(--ink); stroke-width: 22; stroke-linecap: round; opacity: .7; }
+      #hud { filter: drop-shadow(0 0 12px var(--accent3)); }
+      .sonar { fill: none; stroke: var(--accent3); stroke-width: 9; filter: drop-shadow(0 0 10px var(--accent3)); }
+      #core { fill: #fff; filter: drop-shadow(0 0 16px var(--accent3)) drop-shadow(0 0 6px #fff); }
+      #comet { fill: #fff; filter: drop-shadow(0 0 18px #fff) drop-shadow(0 0 30px var(--accent)); }
+      #label { position: absolute; left: 0; top: 0; --fs: 78px; }
+      #root.wide #label { --fs: 72px; }
+      #lbox {
+        display: inline-block; white-space: nowrap; font-size: var(--fs); color: var(--ink); line-height: 1.1;
+        padding: 0.24em 0.55em 0.3em; border-radius: 0.38em; border: 0.07em solid var(--ink);
+        background: linear-gradient(120deg, var(--accent) 0%, var(--accent) 45%, #FFF6B0 52%, var(--accent) 60%, var(--accent2) 140%);
+        box-shadow: 0 0.12em 0 var(--ink), 0 0.3em 0.7em rgba(0,0,0,.45), 0 0 0.6em color-mix(in srgb, var(--accent) 55%, transparent);
+      }
+      #lbox .ch { display: inline-block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="5" data-width="1920" data-height="1080">
+      <div id="backdrop"></div>
+      <div id="stage" class="clip" data-start="0" data-duration="5" data-track-index="1">
+        <div id="cam">
+          <svg id="svg" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="ag" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE21F" id="ag0"/><stop offset="1" stop-color="#FF2D87" id="ag1"/></linearGradient></defs>
+            <g id="sonars"></g>
+            <g id="hud"></g>
+            <circle id="core" r="16"/>
+            <path id="shaftO" class="shO"/><path id="headO" class="shO"/>
+            <g id="glowG"><path id="shaftC" class="shC"/><path id="headC" class="shC"/></g>
+            <circle id="comet" r="13"/>
+          </svg>
+          <div id="label"><div id="lbox" class="disp"></div></div>
+          <div id="fx" class="fx"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+// 무료 모션그래픽 팩 v2 공통 함수 — 정해진 난수·글자 쪼개기·불꽃 터짐·화면 흔들림·색 번짐 (make_templates.sh가 각 index.html에 넣는다)
+var FX = (function () {
+  // 같은 씨앗이면 늘 같은 값: 렌더할 때마다 반짝이 위치가 똑같이 나온다
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hasHangul(v) { return /[ㄱ-힝]/.test(JSON.stringify(v)); }
+  // 글을 한 글자씩 span으로 나눈다(띄어쓰기는 그대로 둔다)
+  function chars(el, text, cls) {
+    el.textContent = "";
+    var out = [];
+    Array.from(String(text)).forEach(function (c) {
+      if (c === " ") { el.appendChild(document.createTextNode(" ")); return; }
+      var s = document.createElement("span");
+      s.className = cls || "ch"; s.textContent = c; s.style.display = "inline-block";
+      el.appendChild(s); out.push(s);
+    });
+    return out;
+  }
+  // 한 점(x, y)에서 불꽃 조각과 별이 사방으로 터진다
+  function burst(tl, parent, x, y, t, o) {
+    o = o || {};
+    var r = rng(o.seed || 7), n = o.n || 12, colors = o.colors || ["#FFE14A", "#FF2D87", "#2BE4FF", "#FFFFFF"];
+    var dist = o.dist || 150, size = o.size || 1;
+    var box = document.createElement("div"); box.className = "fx"; box.style.left = x + "px"; box.style.top = y + "px";
+    parent.appendChild(box);
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + r() * 0.5, d = dist * (0.6 + r() * 0.6), col = colors[i % colors.length];
+      var star = r() < (o.stars == null ? 0.35 : o.stars);
+      var p = document.createElement("div");
+      if (star) {
+        var s = (18 + r() * 22) * size;
+        p.className = "star"; p.style.color = col; p.style.width = s + "px"; p.style.height = s + "px";
+        p.style.marginLeft = -s / 2 + "px"; p.style.marginTop = -s / 2 + "px";
+      } else {
+        var len = (26 + r() * 30) * size, th = (6 + r() * 4) * size;
+        p.className = "spark"; p.style.background = col; p.style.width = len + "px"; p.style.height = th + "px";
+        p.style.marginLeft = -len / 2 + "px"; p.style.marginTop = -th / 2 + "px";
+        p.style.boxShadow = "0 0 14px " + col;
+      }
+      box.appendChild(p);
+      var dx = Math.cos(a) * d, dy = Math.sin(a) * d, rot = a * 180 / Math.PI;
+      gsap.set(p, { opacity: 0 });
+      tl.set(p, { x: 0, y: 0, rotation: star ? 0 : rot, scale: 0.2, opacity: 1 }, t);
+      tl.to(p, { x: dx, y: dy, rotation: star ? 180 : rot, scale: star ? 1 : 0.9, duration: 0.55 + r() * 0.2, ease: "expo.out" }, t);
+      tl.to(p, { scale: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, t + 0.35 + r() * 0.2);
+    }
+    return box;
+  }
+  // 충격파 고리: 한 점에서 크게 퍼지며 사라진다
+  function shock(tl, parent, x, y, t, o) {
+    o = o || {};
+    var size = o.size || 300, el = document.createElement("div");
+    el.className = "ring"; el.style.width = size + "px"; el.style.height = size + "px";
+    el.style.left = x - size / 2 + "px"; el.style.top = y - size / 2 + "px";
+    el.style.borderWidth = (o.width || 10) + "px"; el.style.borderColor = o.color || "#FFFFFF";
+    el.style.boxShadow = "0 0 30px " + (o.color || "#FFFFFF");
+    parent.appendChild(el);
+    gsap.set(el, { opacity: 0 });
+    tl.set(el, { scale: 0.1, opacity: 1 }, t);
+    tl.to(el, { scale: 1, opacity: 0, duration: o.dur || 0.6, ease: "expo.out" }, t);
+    return el;
+  }
+  // 화면 흔들림: 짧게 이리저리 튀다 제자리
+  function shake(tl, target, t, amp, dur, seed) {
+    var r = rng(seed || 3), steps = 7, d = (dur || 0.35) / (steps + 1), kf = [];
+    for (var i = 0; i < steps; i++) {
+      var k = amp * (1 - i / steps);
+      kf.push({ x: (r() * 2 - 1) * k, y: (r() * 2 - 1) * k, rotation: (r() * 2 - 1) * k * 0.04, duration: d, ease: "none" });
+    }
+    kf.push({ x: 0, y: 0, rotation: 0, duration: d, ease: "power2.out" });
+    tl.to(target, { keyframes: kf }, t);
+  }
+  // 색 번짐(글리치): 잠깐 청록·분홍으로 갈라졌다 돌아온다
+  function rgb(tl, target, t, px, base) {
+    base = base || "";
+    function s(k) { return (base ? base + ", " : "") + (-px * k) + "px 0 0 #2BE4FF, " + (px * k) + "px 0 0 #FF2D87"; }
+    tl.set(target, { textShadow: s(1) }, t);
+    tl.set(target, { textShadow: s(-0.6) }, t + 0.05);
+    tl.set(target, { textShadow: s(0.4) }, t + 0.1);
+    tl.set(target, { textShadow: base || "none" }, t + 0.16);
+  }
+  // 칸 너비에 맞을 때까지 글자 크기를 줄인다
+  function fit(el, maxW, minPx, prop) {
+    prop = prop || "fontSize";
+    var fs = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > maxW && fs > (minPx || 24)) { fs -= 2; el.style.fontSize = fs + "px"; }
+    return fs;
+  }
+  return { rng: rng, hasHangul: hasHangul, chars: chars, burst: burst, shock: shock, shake: shake, rgb: rgb, fit: fit };
+})();
+
+      (function () {
+        var v = window.__hyperframes.getVariables();
+        var root = document.getElementById("root");
+        var W = Number(root.getAttribute("data-width")), H = Number(root.getAttribute("data-height"));
+        var wide = W > H;
+        if (wide) root.classList.add("wide");
+        if (!FX.hasHangul(v.label)) root.classList.add("latin");
+        if (v.backdrop !== "none") document.getElementById("backdrop").className = v.backdrop;
+        ["accent", "accent2", "accent3", "ink"].forEach(function (k) { root.style.setProperty("--" + k, v[k]); });
+        document.getElementById("ag0").setAttribute("stop-color", v.accent);
+        document.getElementById("ag1").setAttribute("stop-color", v.accent2);
+        var lch = FX.chars(document.getElementById("lbox"), v.label);
+        var NS = "http://www.w3.org/2000/svg";
+        function mk(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); (parent || document.getElementById("svg")).appendChild(e); return e; }
+
+        document.fonts.ready.then(function () {
+          var label = document.getElementById("label"), lbox = document.getElementById("lbox");
+          // 안전 구역: 세로는 위 160px·아래 440px(쇼츠 UI)·오른쪽 190px(버튼 줄)을 비우고, 가로는 둘레 70px를 비운다
+          var SL = wide ? 70 : 60, SR = W - (wide ? 70 : 190), ST = wide ? 70 : 160, SB = H - (wide ? 70 : 440);
+          var fs = parseFloat(getComputedStyle(lbox).fontSize);
+          while (lbox.offsetWidth + 16 > (SR - SL) * 0.85 && fs > 24) { fs -= 2; label.style.setProperty("--fs", fs + "px"); }
+          var bw = lbox.offsetWidth, bh = lbox.offsetHeight;
+
+          var P = { x: W * v.targetX / 100, y: H * v.targetY / 100 };
+          var left = v.side !== "right";
+          var bx = left ? P.x - 90 - bw : P.x + 90;
+          var below = P.y + 250 + bh <= SB;
+          var by = below ? P.y + 250 : P.y - 250 - bh;
+          bx = Math.max(SL, Math.min(SR - bw - 16, bx));
+          by = Math.max(ST, Math.min(SB - bh - 16, by));
+          label.style.left = bx + "px"; label.style.top = by + "px";
+
+          // 화살표: 이름표 가장자리에서 출발해 바깥으로 불룩하게 굽어 과녁 앞에서 멈춘다
+          var S = { x: bx + bw * (left ? 0.7 : 0.3), y: below ? by - 22 : by + bh + 22 };
+          var dx = P.x - S.x, dy = P.y - S.y, len = Math.hypot(dx, dy) || 1;
+          var nx = -dy / len, ny = dx / len, bend = (left ? -1 : 1) * (below ? 1 : -1) * len * 0.3;
+          var C = { x: (S.x + P.x) / 2 + nx * bend, y: (S.y + P.y) / 2 + ny * bend };
+          var tx = P.x - C.x, ty = P.y - C.y, tl0 = Math.hypot(tx, ty) || 1; tx /= tl0; ty /= tl0;
+          var Ept = { x: P.x - tx * 84, y: P.y - ty * 84 };
+          var shaft = "M" + S.x + " " + S.y + " Q" + C.x + " " + C.y + " " + Ept.x + " " + Ept.y;
+          function rot(a) { var c = Math.cos(a), s = Math.sin(a); return { x: -(tx * c - ty * s) * 50, y: -(tx * s + ty * c) * 50 }; }
+          var h1 = rot(0.6), h2 = rot(-0.6);
+          var head = "M" + (Ept.x + h1.x) + " " + (Ept.y + h1.y) + " L" + Ept.x + " " + Ept.y + " L" + (Ept.x + h2.x) + " " + (Ept.y + h2.y);
+          ["shaftO", "shaftC"].forEach(function (id) { document.getElementById(id).setAttribute("d", shaft); });
+          ["headO", "headC"].forEach(function (id) { document.getElementById(id).setAttribute("d", head); });
+          var ag = document.getElementById("ag"); ag.setAttribute("x1", S.x); ag.setAttribute("y1", S.y); ag.setAttribute("x2", P.x); ag.setAttribute("y2", P.y);
+          var core = document.getElementById("core"); core.setAttribute("cx", P.x); core.setAttribute("cy", P.y);
+
+          // 조준 모서리 4개(ㄱ자)
+          var hud = document.getElementById("hud"), brs = [], R = 80, K = 34;
+          [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (q) {
+            var x = P.x + q[0] * R, y = P.y + q[1] * R;
+            var d = "M" + x + " " + (y - q[1] * K) + " L" + x + " " + y + " L" + (x - q[0] * K) + " " + y;
+            var g = mk("g", {}, hud); mk("path", { d: d, class: "brO" }, g); mk("path", { d: d, class: "br" }, g); brs.push(g);
+          });
+          var sonars = [];
+          for (var k = 0; k < 3; k++) sonars.push(mk("circle", { cx: P.x, cy: P.y, r: 150, class: "sonar" }, document.getElementById("sonars")));
+
+          var sC = document.getElementById("shaftC"), sO = document.getElementById("shaftO");
+          sC.setAttribute("d", shaft);
+          var L = sC.getTotalLength();
+          var comet = document.getElementById("comet");
+          var E = v.exitAt, tilt = left ? -4 : 4, origin = P.x + " " + P.y, hOrigin = Ept.x + " " + Ept.y;
+          var tl = gsap.timeline({ paused: true }), fx = document.getElementById("fx");
+          function cometAt(p) { var pt = sC.getPointAtLength(L * p); comet.setAttribute("cx", pt.x); comet.setAttribute("cy", pt.y); }
+          cometAt(0); gsap.set(comet, { opacity: 0 });
+
+          // 1) 조준: 모서리가 크게 돌며 조여 들고 → 가운데 점이 켜진다
+          tl.fromTo(brs, { scale: 3, rotation: 90, opacity: 0, svgOrigin: origin }, { scale: 1, rotation: 0, opacity: 1, svgOrigin: origin, duration: 0.5, ease: "expo.out", stagger: 0.03 }, 0.05);
+          tl.fromTo(core, { scale: 0, svgOrigin: origin }, { scale: 1, svgOrigin: origin, duration: 0.4, ease: "back.out(3)" }, 0.35);
+          tl.to(brs, { scale: 0.82, svgOrigin: origin, duration: 0.1, yoyo: true, repeat: 1, ease: "power2.out" }, 0.55);
+          // 음파 고리가 되풀이해 퍼진다
+          sonars.forEach(function (c, k) { gsap.set(c, { opacity: 0 }); });
+          for (var T = 0.5, j = 0; T < E; T += 0.42, j++) {
+            var c = sonars[j % 3];
+            tl.set(c, { scale: 0.15, opacity: 1, svgOrigin: origin }, T);
+            tl.to(c, { scale: 1, opacity: 0, svgOrigin: origin, duration: 1.1, ease: "power2.out" }, T);
+          }
+
+          // 2) 이름표: 크게 돌며 튀어나오고 글자가 차례로 통통
+          tl.fromTo("#label", { scale: 0, rotation: tilt * 6, transformOrigin: "50% 50%" }, { scale: 1, rotation: tilt, duration: 0.6, ease: "back.out(2.4)" }, 0.25);
+          tl.fromTo(lch, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "back.out(3)", stagger: 0.03 }, 0.4);
+          FX.burst(tl, fx, bx + bw / 2, by + bh / 2, 0.38, { n: 12, dist: Math.max(bw, bh) * 0.85, seed: 12, colors: [v.accent, v.accent2, "#FFFFFF"] });
+
+          // 3) 화살표: 빛 머리가 앞장서며 그어지고 → 화살촉이 튀고 → 과녁에서 불꽃
+          var t3 = 0.7;
+          tl.fromTo([sO, sC], { strokeDasharray: L + " " + (L + 10), strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.5, ease: "power2.inOut" }, t3);
+          tl.set(comet, { opacity: 1 }, t3);
+          var pr = { p: 0 };
+          tl.fromTo(pr, { p: 0 }, { p: 1, duration: 0.5, ease: "power2.inOut", onUpdate: function () { cometAt(pr.p); } }, t3);
+          tl.to(comet, { opacity: 0, duration: 0.15 }, t3 + 0.5);
+          tl.fromTo(["#headO", "#headC"], { scale: 0, svgOrigin: hOrigin }, { scale: 1, svgOrigin: hOrigin, duration: 0.4, ease: "back.out(4)" }, t3 + 0.45);
+          FX.burst(tl, fx, P.x, P.y, t3 + 0.5, { n: 14, dist: 170, seed: 31, colors: [v.accent3, v.accent, "#FFFFFF"] });
+          FX.shake(tl, "#cam", t3 + 0.5, 12, 0.25, 4);
+
+          // 강조: 이름표가 한 번 흔들리고, 모서리가 두 번 조여진다
+          tl.to("#label", { keyframes: [{ rotation: tilt - 5, scale: 1.06, duration: 0.07 }, { rotation: tilt + 4, duration: 0.08 }, { rotation: tilt - 2, duration: 0.08 }, { rotation: tilt, scale: 1, duration: 0.1 }] }, 2.2);
+          [1.9, 3.0].forEach(function (T) { tl.to(brs, { scale: 0.8, svgOrigin: origin, duration: 0.1, yoyo: true, repeat: 1, ease: "power2.out" }, T); });
+
+          // 퇴장: 모서리가 바깥으로 흩어지고 → 화살표가 감기고 → 이름표가 돌며 작아진다
+          tl.to(brs, { scale: 2.6, rotation: -60, opacity: 0, svgOrigin: origin, duration: 0.35, ease: "power2.in" }, E);
+          tl.to(core, { scale: 0, svgOrigin: origin, duration: 0.25, ease: "back.in(2)" }, E);
+          tl.to(["#headO", "#headC"], { scale: 0, svgOrigin: hOrigin, duration: 0.18, ease: "power2.in" }, E + 0.05);
+          tl.to([sO, sC], { strokeDashoffset: -L, duration: 0.35, ease: "power2.in" }, E + 0.08);
+          tl.to("#label", { scale: 0, rotation: tilt * 6, filter: "blur(10px)", duration: 0.32, ease: "back.in(2)" }, E + 0.25);
+
+          window.__timelines["main"] = tl;
+        });
+      })();
+    </script>
+  </body>
+</html>

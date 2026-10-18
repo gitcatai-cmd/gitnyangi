@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "historyId": "65c7f43c-350e-4923-a650-0ca070d1ed57",
+  "currentRevision": "d1e441d0-adf5-4818-9c6b-b2a1db8dd2f9",
+  "pendingChanges": false,
+  "files": {
+    "assets/fonts/Anton-Regular.ttf": {
+      "hash": "a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/a4/a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab"
+    },
+    "assets/fonts/BlackHanSans-Regular.ttf": {
+      "hash": "31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/31/31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739"
+    },
+    "assets/fonts/OFL-Anton.txt": {
+      "hash": "ee67e6ee22790b7929f1a3769ca2801d565c64b5a9096942c1adf5596de9c9e4",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/ee/ee67e6ee22790b7929f1a3769ca2801d565c64b5a9096942c1adf5596de9c9e4"
+    },
+    "assets/fonts/OFL-BlackHanSans.txt": {
+      "hash": "c324192c8b3a988bae45a9a7e4ac1258b684739003bda114e0523423440457c9",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/c3/c324192c8b3a988bae45a9a7e4ac1258b684739003bda114e0523423440457c9"
+    },
+    "assets/fonts/OFL-Pretendard.txt": {
+      "hash": "82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/82/82e9c8a4b203261f10ddba1296422d64914ff3d4b7bd8a12896d03f0f088d70a"
+    },
+    "hyperframes.json": {
+      "hash": "53dbce1e19aa713cbb12ee0bc4d206143b45ab15e6ffbfcaa8f69572d4d24d50",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/53/53dbce1e19aa713cbb12ee0bc4d206143b45ab15e6ffbfcaa8f69572d4d24d50"
+    },
+    "index.html": {
+      "hash": "4d6cfc4e8971dc9db204ad0a3cb1c3173ffdf0c845677eee32a45e5f8b7a1e71",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/4d/4d6cfc4e8971dc9db204ad0a3cb1c3173ffdf0c845677eee32a45e5f8b7a1e71"
+    },
+    "meta.json": {
+      "hash": "238b23814123c5c4b489476f7d647a0a370818ba0fe9e5803e01ddffbbd16489",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/23/238b23814123c5c4b489476f7d647a0a370818ba0fe9e5803e01ddffbbd16489"
+    },
+    "package.json": {
+      "hash": "735f167169ba86811f8bb46959f3af8657963aac538977179e2e4aefedce367a",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/73/735f167169ba86811f8bb46959f3af8657963aac538977179e2e4aefedce367a"
+    },
+    "vars/en.json": {
+      "hash": "7d060ca29879da18b790bafdd63d5be9309086b1a1084fe4547d69df5d9eaf77",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/7d/7d060ca29879da18b790bafdd63d5be9309086b1a1084fe4547d69df5d9eaf77"
+    },
+    "vars/ko.json": {
+      "hash": "541fcfc4b3ed60059c0dce7ab2b5711492b6dbf5d74d5bd84d677339022cc7c7",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/54/541fcfc4b3ed60059c0dce7ab2b5711492b6dbf5d74d5bd84d677339022cc7c7"
+    },
+    "assets/fonts/PretendardVariable.woff2": {
+      "hash": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
+      "content": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/95/9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4"
+    }
+  },
+  "revisions": {
+    "d1e441d0-adf5-4818-9c6b-b2a1db8dd2f9": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1792331566741,
+      "endedAt": 1792331566742,
+      "files": {
+        "index.html": {
+          "before": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/6c/6c6c904bd9566d95323d968d8d7233f1142bfc322085cff41bf10f26967c0372",
+          "after": "/Users/hmadoka/.cache/hyperframes/history/65c7f43c-350e-4923-a650-0ca070d1ed57/blobs/4d/4d6cfc4e8971dc9db204ad0a3cb1c3173ffdf0c845677eee32a45e5f8b7a1e71"
+        }
+      }
+    }
+  },
+  "checks": {
+    "latest": null,
+    "revisions": {},
+    "unversioned": []
+  },
+  "snapshots": {
+    "latest": null,
+    "revisions": {},
+    "unversioned": []
+  },
+  "renders": {
+    "latest": {
+      "id": "a06d095e-473b-4767-9a17-fdca7084356d",
+      "completedAt": 1792331579610,
+      "output": "/var/folders/fw/xppqrvgx479gqj2dym06y3x00000gn/T/tmp.9vN4LgVdwm/raw.mp4",
+      "status": "completed",
+      "revision": "d1e441d0-adf5-4818-9c6b-b2a1db8dd2f9"
+    },
+    "retainedRevisions": [
+      "d1e441d0-adf5-4818-9c6b-b2a1db8dd2f9"
+    ]
+  },
+  "pendingArtifactCleanup": []
+}

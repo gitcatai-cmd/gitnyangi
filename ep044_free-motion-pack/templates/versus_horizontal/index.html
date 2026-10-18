@@ -1,0 +1,301 @@
+<!doctype html>
+<!-- 비교 카드 VS — 기울어진 두 색 판이 양쪽에서 잔상을 끌며 쾅 부딪히고, 큰 VS가 색 번짐과 충격파로 떨어진 뒤, 고른 쪽은 왕관 배지와 함께 커지고 다른 쪽은 흑백으로 물러난다 -->
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"leftTitle","type":"string","label":"왼쪽(세로판은 위) 제목","default":"집밥"},
+    {"id":"leftSub","type":"string","label":"왼쪽 설명","default":"한 달 30만 원"},
+    {"id":"rightTitle","type":"string","label":"오른쪽(세로판은 아래) 제목","default":"배달 음식"},
+    {"id":"rightSub","type":"string","label":"오른쪽 설명","default":"한 달 80만 원"},
+    {"id":"winner","type":"enum","label":"고른 쪽","default":"left","options":[{"value":"left","label":"왼쪽(위)"},{"value":"right","label":"오른쪽(아래)"},{"value":"none","label":"고르지 않음"}]},
+    {"id":"winTag","type":"string","label":"고른 쪽 배지 글","default":"추천"},
+    {"id":"accent","type":"color","label":"왼쪽 판 색 1","default":"#FF2D87"},
+    {"id":"accent2","type":"color","label":"왼쪽 판 색 2","default":"#FF8A1F"},
+    {"id":"accent3","type":"color","label":"오른쪽 판 색 1","default":"#2BC8FF"},
+    {"id":"accent4","type":"color","label":"오른쪽 판 색 2","default":"#7C4DFF"},
+    {"id":"vsColor","type":"color","label":"VS·배지 색","default":"#FFE21F"},
+    {"id":"ink","type":"color","label":"외곽선 색","default":"#0A0612"},
+    {"id":"exitAt","type":"number","label":"퇴장 시작 (초, 전체 길이-0.7 이하)","default":5.2,"min":1.5,"max":60,"step":0.05,"unit":"s"},
+    {"id":"backdrop","type":"enum","label":"배경","default":"none","options":[{"value":"none","label":"투명"},{"value":"green","label":"초록 화면"},{"value":"preview","label":"미리보기용 회색"}]}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Versus Clash</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+/* 무료 모션그래픽 팩 v2 공통 스타일 — 글꼴·배경·외곽선·광채 같은 10종 공통 부품 (make_templates.sh가 각 index.html에 넣는다) */
+@font-face { font-family: "Pretendard"; src: url("assets/fonts/PretendardVariable.woff2") format("woff2"); font-weight: 45 920; }
+@font-face { font-family: "Black Han Sans"; src: url("assets/fonts/BlackHanSans-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Anton"; src: url("assets/fonts/Anton-Regular.ttf") format("truetype"); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+#root {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  font-family: "Pretendard", sans-serif; -webkit-font-smoothing: antialiased;
+  /* 큰 제목 글꼴: 한글은 Black Han Sans, 영어만 있으면 Anton(대문자) */
+  --disp: "Black Han Sans", "Pretendard", sans-serif;
+  --disp-case: none; --disp-track: -0.01em;
+}
+#root.latin { --disp: "Anton", "Black Han Sans", sans-serif; --disp-case: uppercase; --disp-track: 0.01em; }
+#backdrop { position: absolute; inset: 0; }
+#backdrop.green { background: #00ff00; }
+#backdrop.preview { background: radial-gradient(120% 90% at 30% 20%, #8b8f99 0%, #5d626c 45%, #3a3d44 100%); }
+#stage, #cam { position: absolute; inset: 0; }
+.disp { font-family: var(--disp); text-transform: var(--disp-case); letter-spacing: var(--disp-track); }
+/* 굵은 검은 외곽선 + 부드러운 그림자: 밝은 화면·어두운 화면 어디서나 읽히게 */
+.outline { -webkit-text-stroke: var(--sw, 12px) var(--ink, #0A0612); paint-order: stroke fill; }
+.lift { filter: drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 14px 26px rgba(0,0,0,.45)); }
+/* 반짝이·불꽃 조각 */
+.fx { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.spark { position: absolute; left: 0; top: 0; border-radius: 99px; }
+.star { position: absolute; left: 0; top: 0; }
+.star::before, .star::after { content: ""; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 99px; transform: translate(-50%, -50%); box-shadow: 0 0 12px currentColor; }
+.star::before { width: 100%; height: 18%; }
+.star::after { width: 18%; height: 100%; }
+.ring { position: absolute; left: 0; top: 0; border-radius: 50%; border-style: solid; }
+/* 무지개빛 글자: 아래는 검은 외곽선 글자, 위에 같은 글자를 그러데이션으로 한 겹 더 얹는다(--gp로 빛이 흐른다) */
+.gt { position: relative; }
+.gt::after {
+  content: attr(data-t); position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: inherit; white-space: nowrap;
+  -webkit-text-stroke: 0; color: transparent;
+  background-image: var(--grad); background-size: 300% 100%; background-position: var(--gp, 0%) 50%;
+  -webkit-background-clip: text; background-clip: text;
+}
+/* 초록 화면 모드(backdrop=green): 반투명 빛 번짐·흐린 그림자·빛 테두리 후광·충격파 고리를 끈다
+   → 가장자리가 딱 떨어져 크로마 키로 깨끗하게 빠진다. 투명 MOV·WebM(backdrop=none)은 그대로 다 빛난다 */
+#root:has(#backdrop.green) *, #root:has(#backdrop.green) *::before, #root:has(#backdrop.green) *::after {
+  box-shadow: none !important; text-shadow: none !important;
+}
+#root:has(#backdrop.green) *:not(.pan) { filter: none !important; }
+#root:has(#backdrop.green) .ring, #root:has(#backdrop.green) #halo, #root:has(#backdrop.green) .sonar { display: none !important; }
+
+      .pan { position: absolute; --fs: 140px; }
+      #root.wide .pan { --fs: 130px; }
+      /* 세로: 위아래 두 판 / 가로: 좌우 두 판 */
+      #pL { left: 80px; top: 300px; width: 800px; height: 420px; }
+      #pR { left: 80px; top: 900px; width: 800px; height: 420px; }
+      #root.wide #pL { left: 110px; top: 250px; width: 780px; height: 560px; }
+      #root.wide #pR { left: 1030px; top: 250px; width: 780px; height: 560px; }
+      .card {
+        position: absolute; inset: 0; border-radius: 34px; border: 7px solid var(--ink); overflow: hidden; transform: skewX(-9deg);
+        box-shadow: 0 14px 0 var(--ink), 0 26px 50px rgba(0,0,0,.45);
+      }
+      #pL .card { background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); }
+      #pR .card { background: linear-gradient(135deg, var(--accent3) 0%, var(--accent4) 100%); }
+      .card::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-60deg, rgba(255,255,255,.10) 0 18px, transparent 18px 46px); }
+      .flash { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 2; }
+      .cnt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.16em; padding: 0 60px; }
+      .ttl { font-size: var(--fs); color: #fff; --sw: 0.13em; white-space: nowrap; line-height: 1.05; }
+      .sub { font-size: calc(var(--fs) * 0.42); font-weight: 850; color: #fff; background: var(--ink); padding: 0.16em 0.7em 0.22em; border-radius: 99px; white-space: nowrap; letter-spacing: -0.02em; }
+      #vsT { display: inline-block; }
+      #vs { position: absolute; left: 0; top: 0; font-size: 230px; color: var(--vsColor); --sw: 0.12em; line-height: 1; z-index: 5; font-family: "Anton", "Black Han Sans", sans-serif; letter-spacing: 0.01em; filter: drop-shadow(0 0 30px color-mix(in srgb, var(--vsColor) 70%, transparent)) drop-shadow(0 12px 0 rgba(0,0,0,.4)); }
+      #badge {
+        position: absolute; z-index: 6; display: flex; align-items: center; gap: 0.2em; white-space: nowrap;
+        font-size: 64px; color: var(--ink); background: var(--vsColor); border: 6px solid var(--ink); border-radius: 99px;
+        padding: 0.1em 0.6em 0.14em 0.4em; box-shadow: 0 8px 0 var(--ink), 0 0 40px color-mix(in srgb, var(--vsColor) 70%, transparent);
+      }
+      #badge .crown { width: 1.05em; height: 0.8em; overflow: visible; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="6" data-width="1920" data-height="1080">
+      <div id="backdrop"></div>
+      <div id="stage" class="clip" data-start="0" data-duration="6" data-track-index="1">
+        <div id="cam">
+          <div class="pan" id="pL"><div class="card"><div class="flash"></div></div><div class="cnt"><div class="ttl disp outline" id="lt"></div><div class="sub" id="ls"></div></div></div>
+          <div class="pan" id="pR"><div class="card"><div class="flash"></div></div><div class="cnt"><div class="ttl disp outline" id="rt"></div><div class="sub" id="rs"></div></div></div>
+          <div id="vs" data-layout-allow-occlusion><span id="vsT" class="outline" data-layout-allow-occlusion>VS</span></div>
+          <div id="badge" class="disp"><svg class="crown" viewBox="0 0 60 44"><path d="M5 36 L8 10 L20 22 L30 4 L40 22 L52 10 L55 36 Z" fill="#FF8A1F" stroke="#0A0612" stroke-width="5" stroke-linejoin="round"/><circle cx="30" cy="5" r="5" fill="#fff" stroke="#0A0612" stroke-width="3"/></svg><span id="btxt"></span></div>
+          <div id="fx" class="fx"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+// 무료 모션그래픽 팩 v2 공통 함수 — 정해진 난수·글자 쪼개기·불꽃 터짐·화면 흔들림·색 번짐 (make_templates.sh가 각 index.html에 넣는다)
+var FX = (function () {
+  // 같은 씨앗이면 늘 같은 값: 렌더할 때마다 반짝이 위치가 똑같이 나온다
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hasHangul(v) { return /[ㄱ-힝]/.test(JSON.stringify(v)); }
+  // 글을 한 글자씩 span으로 나눈다(띄어쓰기는 그대로 둔다)
+  function chars(el, text, cls) {
+    el.textContent = "";
+    var out = [];
+    Array.from(String(text)).forEach(function (c) {
+      if (c === " ") { el.appendChild(document.createTextNode(" ")); return; }
+      var s = document.createElement("span");
+      s.className = cls || "ch"; s.textContent = c; s.style.display = "inline-block";
+      el.appendChild(s); out.push(s);
+    });
+    return out;
+  }
+  // 한 점(x, y)에서 불꽃 조각과 별이 사방으로 터진다
+  function burst(tl, parent, x, y, t, o) {
+    o = o || {};
+    var r = rng(o.seed || 7), n = o.n || 12, colors = o.colors || ["#FFE14A", "#FF2D87", "#2BE4FF", "#FFFFFF"];
+    var dist = o.dist || 150, size = o.size || 1;
+    var box = document.createElement("div"); box.className = "fx"; box.style.left = x + "px"; box.style.top = y + "px";
+    parent.appendChild(box);
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + r() * 0.5, d = dist * (0.6 + r() * 0.6), col = colors[i % colors.length];
+      var star = r() < (o.stars == null ? 0.35 : o.stars);
+      var p = document.createElement("div");
+      if (star) {
+        var s = (18 + r() * 22) * size;
+        p.className = "star"; p.style.color = col; p.style.width = s + "px"; p.style.height = s + "px";
+        p.style.marginLeft = -s / 2 + "px"; p.style.marginTop = -s / 2 + "px";
+      } else {
+        var len = (26 + r() * 30) * size, th = (6 + r() * 4) * size;
+        p.className = "spark"; p.style.background = col; p.style.width = len + "px"; p.style.height = th + "px";
+        p.style.marginLeft = -len / 2 + "px"; p.style.marginTop = -th / 2 + "px";
+        p.style.boxShadow = "0 0 14px " + col;
+      }
+      box.appendChild(p);
+      var dx = Math.cos(a) * d, dy = Math.sin(a) * d, rot = a * 180 / Math.PI;
+      gsap.set(p, { opacity: 0 });
+      tl.set(p, { x: 0, y: 0, rotation: star ? 0 : rot, scale: 0.2, opacity: 1 }, t);
+      tl.to(p, { x: dx, y: dy, rotation: star ? 180 : rot, scale: star ? 1 : 0.9, duration: 0.55 + r() * 0.2, ease: "expo.out" }, t);
+      tl.to(p, { scale: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, t + 0.35 + r() * 0.2);
+    }
+    return box;
+  }
+  // 충격파 고리: 한 점에서 크게 퍼지며 사라진다
+  function shock(tl, parent, x, y, t, o) {
+    o = o || {};
+    var size = o.size || 300, el = document.createElement("div");
+    el.className = "ring"; el.style.width = size + "px"; el.style.height = size + "px";
+    el.style.left = x - size / 2 + "px"; el.style.top = y - size / 2 + "px";
+    el.style.borderWidth = (o.width || 10) + "px"; el.style.borderColor = o.color || "#FFFFFF";
+    el.style.boxShadow = "0 0 30px " + (o.color || "#FFFFFF");
+    parent.appendChild(el);
+    gsap.set(el, { opacity: 0 });
+    tl.set(el, { scale: 0.1, opacity: 1 }, t);
+    tl.to(el, { scale: 1, opacity: 0, duration: o.dur || 0.6, ease: "expo.out" }, t);
+    return el;
+  }
+  // 화면 흔들림: 짧게 이리저리 튀다 제자리
+  function shake(tl, target, t, amp, dur, seed) {
+    var r = rng(seed || 3), steps = 7, d = (dur || 0.35) / (steps + 1), kf = [];
+    for (var i = 0; i < steps; i++) {
+      var k = amp * (1 - i / steps);
+      kf.push({ x: (r() * 2 - 1) * k, y: (r() * 2 - 1) * k, rotation: (r() * 2 - 1) * k * 0.04, duration: d, ease: "none" });
+    }
+    kf.push({ x: 0, y: 0, rotation: 0, duration: d, ease: "power2.out" });
+    tl.to(target, { keyframes: kf }, t);
+  }
+  // 색 번짐(글리치): 잠깐 청록·분홍으로 갈라졌다 돌아온다
+  function rgb(tl, target, t, px, base) {
+    base = base || "";
+    function s(k) { return (base ? base + ", " : "") + (-px * k) + "px 0 0 #2BE4FF, " + (px * k) + "px 0 0 #FF2D87"; }
+    tl.set(target, { textShadow: s(1) }, t);
+    tl.set(target, { textShadow: s(-0.6) }, t + 0.05);
+    tl.set(target, { textShadow: s(0.4) }, t + 0.1);
+    tl.set(target, { textShadow: base || "none" }, t + 0.16);
+  }
+  // 칸 너비에 맞을 때까지 글자 크기를 줄인다
+  function fit(el, maxW, minPx, prop) {
+    prop = prop || "fontSize";
+    var fs = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > maxW && fs > (minPx || 24)) { fs -= 2; el.style.fontSize = fs + "px"; }
+    return fs;
+  }
+  return { rng: rng, hasHangul: hasHangul, chars: chars, burst: burst, shock: shock, shake: shake, rgb: rgb, fit: fit };
+})();
+
+      (function () {
+        var v = window.__hyperframes.getVariables();
+        var root = document.getElementById("root");
+        var W = Number(root.getAttribute("data-width")), H = Number(root.getAttribute("data-height"));
+        var wide = W > H;
+        if (wide) root.classList.add("wide");
+        if (!FX.hasHangul([v.leftTitle, v.rightTitle, v.winTag])) root.classList.add("latin");
+        if (v.backdrop !== "none") document.getElementById("backdrop").className = v.backdrop;
+        ["accent", "accent2", "accent3", "accent4", "vsColor", "ink"].forEach(function (k) { root.style.setProperty("--" + k, v[k]); });
+        document.getElementById("lt").textContent = v.leftTitle; document.getElementById("rt").textContent = v.rightTitle;
+        ["ls", "rs"].forEach(function (id, i) { var t = i ? v.rightSub : v.leftSub; var e = document.getElementById(id); e.textContent = t; if (!String(t || "").trim()) e.style.display = "none"; });
+        document.getElementById("btxt").textContent = v.winTag;
+
+        document.fonts.ready.then(function () {
+          ["lt", "rt"].forEach(function (id) { var e = document.getElementById(id); FX.fit(e, e.parentNode.clientWidth - 120, 36); });
+          ["ls", "rs"].forEach(function (id) { var e = document.getElementById(id); FX.fit(e, e.parentNode.clientWidth - 120, 20); });
+          var pL = document.getElementById("pL"), pR = document.getElementById("pR"), vs = document.getElementById("vs"), badge = document.getElementById("badge");
+          // VS는 두 판 사이 한가운데
+          var cx, cy;
+          if (wide) { cx = (pL.offsetLeft + pL.offsetWidth + pR.offsetLeft) / 2; cy = pL.offsetTop + pL.offsetHeight / 2; }
+          else { cx = pL.offsetLeft + pL.offsetWidth / 2; cy = (pL.offsetTop + pL.offsetHeight + pR.offsetTop) / 2; }
+          vs.style.left = cx - vs.offsetWidth / 2 + "px"; vs.style.top = cy - vs.offsetHeight / 2 + "px";
+
+          var win = v.winner === "left" ? pL : v.winner === "right" ? pR : null, lose = win === pL ? pR : win === pR ? pL : null;
+          if (win) {
+            badge.style.left = win.offsetLeft + win.offsetWidth - badge.offsetWidth * 0.75 + "px";
+            badge.style.top = win.offsetTop - badge.offsetHeight * 0.45 + "px";
+          } else badge.style.display = "none";
+
+          var tl = gsap.timeline({ paused: true }), E = v.exitAt, fx = document.getElementById("fx");
+          var ax = wide ? "x" : "y", far = wide ? 1300 : 1300;
+          // 1) 두 판이 양쪽에서 잔상을 끌며(늘어나며 흐림) 날아와 쾅 부딪힌다
+          var fromL = {}, fromR = {};
+          fromL[ax] = -far; fromR[ax] = far;
+          [[pL, fromL], [pR, fromR]].forEach(function (p) {
+            var f = Object.assign({ filter: "blur(20px)", opacity: 0 }, p[1]); f[wide ? "scaleX" : "scaleY"] = 1.5;
+            var t = { filter: "blur(0px)", opacity: 1, duration: 0.34, ease: "power4.out" }; t[ax] = 0; t[wide ? "scaleX" : "scaleY"] = 1;
+            tl.fromTo(p[0], f, t, 0.08);
+          });
+          var hit = 0.36;
+          tl.fromTo(".flash", { opacity: 0.9 }, { opacity: 0, duration: 0.35, ease: "power2.out", immediateRender: false }, hit);
+          var bump = {}; bump[ax] = 0;
+          tl.fromTo(pL, Object.fromEntries([[ax, 26]]), Object.assign({ duration: 0.4, ease: "elastic.out(1.2, 0.35)", immediateRender: false }, bump), hit);
+          tl.fromTo(pR, Object.fromEntries([[ax, -26]]), Object.assign({ duration: 0.4, ease: "elastic.out(1.2, 0.35)", immediateRender: false }, bump), hit);
+          FX.shake(tl, "#cam", hit, 34, 0.45, 8);
+          // 글자는 판보다 조금 늦게 튀어나온다
+          tl.fromTo(".ttl", { scale: 0.3, opacity: 0, rotation: -8 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.45, ease: "back.out(2.6)", stagger: 0.06 }, hit + 0.06);
+          tl.fromTo(".sub", { y: 30, opacity: 0, scale: 0.8 }, { y: 0, opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2.5)", stagger: 0.06 }, hit + 0.2);
+
+          // 2) VS: 아주 크게 돌며 떨어져 박힌다 → 색 번짐·충격파·전기 불꽃
+          var vsHit = hit + 0.22;
+          tl.fromTo(vs, { scale: 5, rotation: -40, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.3, ease: "power4.in" }, vsHit - 0.3);
+          tl.fromTo("#vsT", { filter: "blur(16px)" }, { filter: "blur(0px)", duration: 0.3, ease: "power4.in" }, vsHit - 0.3);
+          tl.to(vs, { keyframes: [{ scale: 1.2, duration: 0.06 }, { scale: 1, duration: 0.5, ease: "elastic.out(1.3, 0.3)" }] }, vsHit);
+          FX.rgb(tl, "#vsT", vsHit, 14);
+          FX.shock(tl, fx, cx, cy, vsHit, { size: wide ? 900 : 1000, width: 16, color: v.vsColor, dur: 0.6 });
+          FX.burst(tl, fx, cx, cy, vsHit, { n: 20, dist: wide ? 380 : 460, seed: 5, colors: [v.vsColor, "#FFFFFF", v.accent, v.accent3], size: 1.3, stars: 0.2 });
+          FX.shake(tl, "#cam", vsHit, 22, 0.35, 12);
+          // VS가 숨 쉬듯 빛난다
+          tl.to(vs, { scale: 1.08, duration: 0.35, yoyo: true, repeat: 3, ease: "sine.inOut" }, vsHit + 0.8);
+
+          // 3) 고른 쪽: 커지며 앞으로 나오고 왕관 배지가 튕겨 붙는다 / 다른 쪽: 흑백으로 작아진다
+          if (win) {
+            var tw = 2.4;
+            tl.to(win, { scale: 1.07, zIndex: 3, duration: 0.5, ease: "elastic.out(1.1, 0.45)" }, tw);
+            tl.fromTo(lose, { filter: "grayscale(0) brightness(1) blur(0px)" }, { filter: "grayscale(1) brightness(0.55) blur(0px)", scale: 0.92, duration: 0.4, ease: "power2.out" }, tw);
+            tl.fromTo(badge, { scale: 0, rotation: -30 }, { scale: 1, rotation: 8, duration: 0.55, ease: "back.out(3)" }, tw + 0.08);
+            var bx = badge.offsetLeft + badge.offsetWidth / 2, by = badge.offsetTop + badge.offsetHeight / 2;
+            FX.burst(tl, fx, bx, by, tw + 0.12, { n: 14, dist: 220, seed: 41, stars: 0.7, colors: [v.vsColor, "#FFFFFF", v.accent], size: 1.2 });
+            tl.to(badge, { rotation: -6, duration: 0.14, yoyo: true, repeat: 3, ease: "sine.inOut" }, tw + 0.9);
+          }
+
+          // 퇴장: VS가 돌며 사라지고 → 두 판이 들어온 쪽으로 흐리며 빠진다
+          tl.to(badge, { scale: 0, rotation: 40, duration: 0.22, ease: "back.in(2)" }, E);
+          tl.to(vs, { scale: 0, rotation: 180, opacity: 0, duration: 0.3, ease: "back.in(2)" }, E);
+          [[pL, -far], [pR, far]].forEach(function (p) {
+            var o = { opacity: 0, duration: 0.36, ease: "power3.in", filter: p[0] === lose ? "grayscale(1) brightness(0.55) blur(18px)" : "blur(18px)" };
+            o[ax] = p[1];
+            tl.to(p[0], o, E + 0.15);
+          });
+
+          window.__timelines["main"] = tl;
+        });
+      })();
+    </script>
+  </body>
+</html>

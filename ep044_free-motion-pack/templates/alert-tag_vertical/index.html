@@ -1,0 +1,270 @@
+<!doctype html>
+<!-- 주의·팁·알림 스티커 — 꼬리표가 색 번짐과 조각 어긋남(글리치)으로 지직 나타나 튕겨 서고, 아이콘이 흔들리며 고리가 퍼지고, 끝에는 옛날 TV 꺼지듯 한 줄로 접혀 사라진다 -->
+<html
+  lang="ko"
+  data-composition-variables='[
+    {"id":"kind","type":"enum","label":"종류","default":"warn","options":[{"value":"warn","label":"주의"},{"value":"tip","label":"팁"},{"value":"info","label":"알림"}]},
+    {"id":"text","type":"string","label":"내용","default":"전원을 끄고 만지세요"},
+    {"id":"label","type":"string","label":"머리 글 (비우면 종류에 맞춰 자동)","default":""},
+    {"id":"warnA","type":"color","label":"주의 색 1","default":"#FFE21F"},
+    {"id":"warnB","type":"color","label":"주의 색 2","default":"#FF7A1A"},
+    {"id":"tipA","type":"color","label":"팁 색 1","default":"#2BE4FF"},
+    {"id":"tipB","type":"color","label":"팁 색 2","default":"#7C4DFF"},
+    {"id":"infoA","type":"color","label":"알림 색 1","default":"#FF2D87"},
+    {"id":"infoB","type":"color","label":"알림 색 2","default":"#8B5CFF"},
+    {"id":"ink","type":"color","label":"외곽선 색","default":"#0A0612"},
+    {"id":"exitAt","type":"number","label":"퇴장 시작 (초, 전체 길이-0.6 이하)","default":3.85,"min":1.2,"max":60,"step":0.05,"unit":"s"},
+    {"id":"backdrop","type":"enum","label":"배경","default":"none","options":[{"value":"none","label":"투명"},{"value":"green","label":"초록 화면"},{"value":"preview","label":"미리보기용 회색"}]}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Glitch Alert Tag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+/* 무료 모션그래픽 팩 v2 공통 스타일 — 글꼴·배경·외곽선·광채 같은 10종 공통 부품 (make_templates.sh가 각 index.html에 넣는다) */
+@font-face { font-family: "Pretendard"; src: url("assets/fonts/PretendardVariable.woff2") format("woff2"); font-weight: 45 920; }
+@font-face { font-family: "Black Han Sans"; src: url("assets/fonts/BlackHanSans-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Anton"; src: url("assets/fonts/Anton-Regular.ttf") format("truetype"); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+#root {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  font-family: "Pretendard", sans-serif; -webkit-font-smoothing: antialiased;
+  /* 큰 제목 글꼴: 한글은 Black Han Sans, 영어만 있으면 Anton(대문자) */
+  --disp: "Black Han Sans", "Pretendard", sans-serif;
+  --disp-case: none; --disp-track: -0.01em;
+}
+#root.latin { --disp: "Anton", "Black Han Sans", sans-serif; --disp-case: uppercase; --disp-track: 0.01em; }
+#backdrop { position: absolute; inset: 0; }
+#backdrop.green { background: #00ff00; }
+#backdrop.preview { background: radial-gradient(120% 90% at 30% 20%, #8b8f99 0%, #5d626c 45%, #3a3d44 100%); }
+#stage, #cam { position: absolute; inset: 0; }
+.disp { font-family: var(--disp); text-transform: var(--disp-case); letter-spacing: var(--disp-track); }
+/* 굵은 검은 외곽선 + 부드러운 그림자: 밝은 화면·어두운 화면 어디서나 읽히게 */
+.outline { -webkit-text-stroke: var(--sw, 12px) var(--ink, #0A0612); paint-order: stroke fill; }
+.lift { filter: drop-shadow(0 6px 0 rgba(0,0,0,.35)) drop-shadow(0 14px 26px rgba(0,0,0,.45)); }
+/* 반짝이·불꽃 조각 */
+.fx { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.spark { position: absolute; left: 0; top: 0; border-radius: 99px; }
+.star { position: absolute; left: 0; top: 0; }
+.star::before, .star::after { content: ""; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 99px; transform: translate(-50%, -50%); box-shadow: 0 0 12px currentColor; }
+.star::before { width: 100%; height: 18%; }
+.star::after { width: 18%; height: 100%; }
+.ring { position: absolute; left: 0; top: 0; border-radius: 50%; border-style: solid; }
+/* 무지개빛 글자: 아래는 검은 외곽선 글자, 위에 같은 글자를 그러데이션으로 한 겹 더 얹는다(--gp로 빛이 흐른다) */
+.gt { position: relative; }
+.gt::after {
+  content: attr(data-t); position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: inherit; white-space: nowrap;
+  -webkit-text-stroke: 0; color: transparent;
+  background-image: var(--grad); background-size: 300% 100%; background-position: var(--gp, 0%) 50%;
+  -webkit-background-clip: text; background-clip: text;
+}
+/* 초록 화면 모드(backdrop=green): 반투명 빛 번짐·흐린 그림자·빛 테두리 후광·충격파 고리를 끈다
+   → 가장자리가 딱 떨어져 크로마 키로 깨끗하게 빠진다. 투명 MOV·WebM(backdrop=none)은 그대로 다 빛난다 */
+#root:has(#backdrop.green) *, #root:has(#backdrop.green) *::before, #root:has(#backdrop.green) *::after {
+  box-shadow: none !important; text-shadow: none !important;
+}
+#root:has(#backdrop.green) *:not(.pan) { filter: none !important; }
+#root:has(#backdrop.green) .ring, #root:has(#backdrop.green) #halo, #root:has(#backdrop.green) .sonar { display: none !important; }
+
+      /* 세로: 위쪽(오른쪽 버튼 줄 앞까지) / 가로: 위 가운데 */
+      #wrap { position: absolute; left: 60px; width: 840px; top: 300px; height: 360px; display: flex; align-items: center; justify-content: center; --fs: 80px; }
+      #root.wide #wrap { left: 260px; width: 1400px; top: 70px; height: 300px; --fs: 72px; }
+      #tag { position: relative; display: flex; align-items: center; gap: 0.4em; font-size: var(--fs); padding: 0.3em 0.8em 0.3em 0.3em; border-radius: 0.5em;
+        background: linear-gradient(120deg, var(--a) 0%, var(--b) 100%); border: 0.08em solid var(--ink);
+        box-shadow: 0 0.13em 0 var(--ink), 0 0.35em 0.7em rgba(0,0,0,.4), 0 0 0.9em color-mix(in srgb, var(--a) 60%, transparent); max-width: 100%; }
+      #tag.warn::before { content: ""; position: absolute; inset: 0; border-radius: 0.42em; background: repeating-linear-gradient(-45deg, rgba(10,6,18,.13) 0 0.22em, transparent 0.22em 0.44em); pointer-events: none; }
+      #ico { position: relative; flex: none; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 0.06em #fff inset; }
+      #ico svg { width: 1.1em; height: 1.1em; overflow: visible; }
+      #col { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0.12em; min-width: 0; }
+      #lab { font-size: 0.5em; font-weight: 900; letter-spacing: 0.08em; color: var(--a); background: var(--ink); padding: 0.14em 0.6em 0.18em; border-radius: 99px; white-space: nowrap; }
+      #txt { font-size: 1em; color: #fff; --sw: 0.13em; white-space: nowrap; line-height: 1.12; }
+      #tag.warn #txt { color: var(--ink); -webkit-text-stroke: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4.5" data-width="1080" data-height="1920">
+      <div id="backdrop"></div>
+      <div id="stage" class="clip" data-start="0" data-duration="4.5" data-track-index="1">
+        <div id="cam">
+          <div id="wrap">
+            <div id="tag">
+              <div id="ico"></div>
+              <div id="col"><div id="lab"></div><div id="txt" class="disp outline"></div></div>
+            </div>
+          </div>
+          <div id="fx" class="fx"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+// 무료 모션그래픽 팩 v2 공통 함수 — 정해진 난수·글자 쪼개기·불꽃 터짐·화면 흔들림·색 번짐 (make_templates.sh가 각 index.html에 넣는다)
+var FX = (function () {
+  // 같은 씨앗이면 늘 같은 값: 렌더할 때마다 반짝이 위치가 똑같이 나온다
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hasHangul(v) { return /[ㄱ-힝]/.test(JSON.stringify(v)); }
+  // 글을 한 글자씩 span으로 나눈다(띄어쓰기는 그대로 둔다)
+  function chars(el, text, cls) {
+    el.textContent = "";
+    var out = [];
+    Array.from(String(text)).forEach(function (c) {
+      if (c === " ") { el.appendChild(document.createTextNode(" ")); return; }
+      var s = document.createElement("span");
+      s.className = cls || "ch"; s.textContent = c; s.style.display = "inline-block";
+      el.appendChild(s); out.push(s);
+    });
+    return out;
+  }
+  // 한 점(x, y)에서 불꽃 조각과 별이 사방으로 터진다
+  function burst(tl, parent, x, y, t, o) {
+    o = o || {};
+    var r = rng(o.seed || 7), n = o.n || 12, colors = o.colors || ["#FFE14A", "#FF2D87", "#2BE4FF", "#FFFFFF"];
+    var dist = o.dist || 150, size = o.size || 1;
+    var box = document.createElement("div"); box.className = "fx"; box.style.left = x + "px"; box.style.top = y + "px";
+    parent.appendChild(box);
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + r() * 0.5, d = dist * (0.6 + r() * 0.6), col = colors[i % colors.length];
+      var star = r() < (o.stars == null ? 0.35 : o.stars);
+      var p = document.createElement("div");
+      if (star) {
+        var s = (18 + r() * 22) * size;
+        p.className = "star"; p.style.color = col; p.style.width = s + "px"; p.style.height = s + "px";
+        p.style.marginLeft = -s / 2 + "px"; p.style.marginTop = -s / 2 + "px";
+      } else {
+        var len = (26 + r() * 30) * size, th = (6 + r() * 4) * size;
+        p.className = "spark"; p.style.background = col; p.style.width = len + "px"; p.style.height = th + "px";
+        p.style.marginLeft = -len / 2 + "px"; p.style.marginTop = -th / 2 + "px";
+        p.style.boxShadow = "0 0 14px " + col;
+      }
+      box.appendChild(p);
+      var dx = Math.cos(a) * d, dy = Math.sin(a) * d, rot = a * 180 / Math.PI;
+      gsap.set(p, { opacity: 0 });
+      tl.set(p, { x: 0, y: 0, rotation: star ? 0 : rot, scale: 0.2, opacity: 1 }, t);
+      tl.to(p, { x: dx, y: dy, rotation: star ? 180 : rot, scale: star ? 1 : 0.9, duration: 0.55 + r() * 0.2, ease: "expo.out" }, t);
+      tl.to(p, { scale: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, t + 0.35 + r() * 0.2);
+    }
+    return box;
+  }
+  // 충격파 고리: 한 점에서 크게 퍼지며 사라진다
+  function shock(tl, parent, x, y, t, o) {
+    o = o || {};
+    var size = o.size || 300, el = document.createElement("div");
+    el.className = "ring"; el.style.width = size + "px"; el.style.height = size + "px";
+    el.style.left = x - size / 2 + "px"; el.style.top = y - size / 2 + "px";
+    el.style.borderWidth = (o.width || 10) + "px"; el.style.borderColor = o.color || "#FFFFFF";
+    el.style.boxShadow = "0 0 30px " + (o.color || "#FFFFFF");
+    parent.appendChild(el);
+    gsap.set(el, { opacity: 0 });
+    tl.set(el, { scale: 0.1, opacity: 1 }, t);
+    tl.to(el, { scale: 1, opacity: 0, duration: o.dur || 0.6, ease: "expo.out" }, t);
+    return el;
+  }
+  // 화면 흔들림: 짧게 이리저리 튀다 제자리
+  function shake(tl, target, t, amp, dur, seed) {
+    var r = rng(seed || 3), steps = 7, d = (dur || 0.35) / (steps + 1), kf = [];
+    for (var i = 0; i < steps; i++) {
+      var k = amp * (1 - i / steps);
+      kf.push({ x: (r() * 2 - 1) * k, y: (r() * 2 - 1) * k, rotation: (r() * 2 - 1) * k * 0.04, duration: d, ease: "none" });
+    }
+    kf.push({ x: 0, y: 0, rotation: 0, duration: d, ease: "power2.out" });
+    tl.to(target, { keyframes: kf }, t);
+  }
+  // 색 번짐(글리치): 잠깐 청록·분홍으로 갈라졌다 돌아온다
+  function rgb(tl, target, t, px, base) {
+    base = base || "";
+    function s(k) { return (base ? base + ", " : "") + (-px * k) + "px 0 0 #2BE4FF, " + (px * k) + "px 0 0 #FF2D87"; }
+    tl.set(target, { textShadow: s(1) }, t);
+    tl.set(target, { textShadow: s(-0.6) }, t + 0.05);
+    tl.set(target, { textShadow: s(0.4) }, t + 0.1);
+    tl.set(target, { textShadow: base || "none" }, t + 0.16);
+  }
+  // 칸 너비에 맞을 때까지 글자 크기를 줄인다
+  function fit(el, maxW, minPx, prop) {
+    prop = prop || "fontSize";
+    var fs = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > maxW && fs > (minPx || 24)) { fs -= 2; el.style.fontSize = fs + "px"; }
+    return fs;
+  }
+  return { rng: rng, hasHangul: hasHangul, chars: chars, burst: burst, shock: shock, shake: shake, rgb: rgb, fit: fit };
+})();
+
+      (function () {
+        var v = window.__hyperframes.getVariables();
+        var root = document.getElementById("root");
+        var W = Number(root.getAttribute("data-width")), H = Number(root.getAttribute("data-height"));
+        var wide = W > H;
+        if (wide) root.classList.add("wide");
+        var ko = FX.hasHangul([v.text, v.label]);
+        if (!ko) root.classList.add("latin");
+        if (v.backdrop !== "none") document.getElementById("backdrop").className = v.backdrop;
+        var kind = ["warn", "tip", "info"].indexOf(v.kind) >= 0 ? v.kind : "warn";
+        var pal = { warn: [v.warnA, v.warnB], tip: [v.tipA, v.tipB], info: [v.infoA, v.infoB] }[kind];
+        root.style.setProperty("--a", pal[0]); root.style.setProperty("--b", pal[1]); root.style.setProperty("--ink", v.ink);
+        var tag = document.getElementById("tag"); tag.classList.add(kind);
+        var auto = ko ? { warn: "주의", tip: "팁", info: "알림" } : { warn: "WARNING", tip: "TIP", info: "NOTICE" };
+        document.getElementById("lab").textContent = String(v.label || "").trim() || auto[kind];
+        document.getElementById("txt").textContent = v.text;
+        // 아이콘은 글꼴이 아니라 도형으로 그린다(어느 컴퓨터에서나 똑같이 나온다)
+        var A = pal[0];
+        var icons = {
+          warn: '<svg viewBox="0 0 100 100"><path d="M50 8 L94 88 L6 88 Z" fill="' + A + '" stroke="' + A + '" stroke-width="8" stroke-linejoin="round"/><rect x="44" y="34" width="12" height="30" rx="6" fill="#0A0612"/><circle cx="50" cy="75" r="7" fill="#0A0612"/></svg>',
+          tip: '<svg viewBox="0 0 100 100"><path d="M50 6 C26 6 14 24 14 40 C14 56 26 62 32 72 L68 72 C74 62 86 56 86 40 C86 24 74 6 50 6 Z" fill="' + A + '"/><rect x="33" y="78" width="34" height="8" rx="4" fill="' + A + '"/><rect x="38" y="90" width="24" height="8" rx="4" fill="' + A + '"/><path d="M40 52 L50 36 L60 52" fill="none" stroke="#0A0612" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          info: '<svg viewBox="0 0 100 100"><path d="M50 8 C30 8 22 26 22 44 L22 62 L10 78 L90 78 L78 62 L78 44 C78 26 70 8 50 8 Z" fill="' + A + '"/><circle cx="50" cy="88" r="9" fill="' + A + '"/><circle cx="80" cy="18" r="13" fill="#fff"/></svg>'
+        };
+        document.getElementById("ico").innerHTML = icons[kind];
+
+        document.fonts.ready.then(function () {
+          var wrap = document.getElementById("wrap");
+          var fs = parseFloat(getComputedStyle(wrap).getPropertyValue("--fs"));
+          while (tag.offsetWidth > wrap.clientWidth - 10 && fs > 24) { fs -= 2; wrap.style.setProperty("--fs", fs + "px"); }
+
+          var tl = gsap.timeline({ paused: true }), E = v.exitAt, fx = document.getElementById("fx");
+          var ir = document.getElementById("ico").getBoundingClientRect(), icx = ir.left + ir.width / 2, icy = ir.top + ir.height / 2;
+          var txt = document.getElementById("txt");
+          // 1) 글리치 등장: 가로 조각이 어긋나고 색이 번지며 몇 번 지직거린 뒤 튕겨 선다
+          var g = [
+            { t: 0.05, x: -40, sx: 1.1, sy: 0.3, clip: "inset(30% 0 45% 0 round 0.5em)", o: 1 },
+            { t: 0.09, x: 30, sx: 0.9, sy: 1.2, clip: "inset(0 0 60% 0 round 0.5em)", o: 1 },
+            { t: 0.13, x: 0, sx: 1, sy: 1, clip: "inset(0 0 0 0 round 0.5em)", o: 0 },
+            { t: 0.17, x: -18, sx: 1.05, sy: 0.9, clip: "inset(55% 0 0 0 round 0.5em)", o: 1 },
+            { t: 0.21, x: 12, sx: 1, sy: 1, clip: "inset(0 0 25% 0 round 0.5em)", o: 1 }
+          ];
+          gsap.set(tag, { opacity: 0 });
+          g.forEach(function (s) { tl.set(tag, { x: s.x, scaleX: s.sx, scaleY: s.sy, clipPath: s.clip, opacity: s.o }, s.t); });
+          tl.set(tag, { clipPath: "inset(-30% -30% -30% -30% round 0.5em)", opacity: 1 }, 0.25);
+          tl.fromTo(tag, { x: 12, scale: 1.18, rotation: -3 }, { x: 0, scale: 1, rotation: 0, duration: 0.55, ease: "elastic.out(1.2, 0.4)", immediateRender: false }, 0.25);
+          FX.rgb(tl, txt, 0.05, 10); FX.rgb(tl, txt, 0.2, 7);
+          FX.shake(tl, "#cam", 0.25, 18, 0.3, 6);
+          // 2) 아이콘이 튀어 오르고 고리가 퍼진다
+          tl.fromTo("#ico", { scale: 0, rotation: -120 }, { scale: 1, rotation: 0, duration: 0.6, ease: "back.out(3)" }, 0.3);
+          FX.shock(tl, fx, icx, icy, 0.4, { size: 420, width: 10, color: pal[0], dur: 0.6 });
+          FX.burst(tl, fx, icx, icy, 0.42, { n: 10, dist: 200, seed: 9, colors: [pal[0], pal[1], "#FFFFFF"] });
+          tl.fromTo("#lab", { x: -30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 0.45);
+          // 3) 머무는 동안: 아이콘이 두 번 흔들리고 고리가 한 번 더 퍼진다
+          [1.3, 2.5].forEach(function (T, k) {
+            tl.to("#ico", { keyframes: [{ rotation: -18, scale: 1.15, duration: 0.07 }, { rotation: 14, duration: 0.08 }, { rotation: -8, duration: 0.08 }, { rotation: 0, scale: 1, duration: 0.12 }] }, T);
+            FX.shock(tl, fx, icx, icy, T, { size: 300, width: 6, color: pal[0], dur: 0.7 });
+          });
+          FX.rgb(tl, txt, 2.0, 6);
+
+          // 퇴장: 옛날 TV가 꺼지듯 위아래로 납작해져 한 줄이 되고 → 가운데로 줄어 사라진다
+          tl.fromTo(tag, { filter: "brightness(1)" }, { scaleY: 0.03, scaleX: 1.08, filter: "brightness(2.2)", duration: 0.16, ease: "power3.in", immediateRender: false }, E);
+          tl.to(tag, { scaleX: 0, opacity: 0, duration: 0.2, ease: "power3.in" }, E + 0.16);
+
+          window.__timelines["main"] = tl;
+        });
+      })();
+    </script>
+  </body>
+</html>
