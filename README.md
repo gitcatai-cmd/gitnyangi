@@ -26,7 +26,7 @@
 | 44화 자막 효과 10종 무료 | [`ep044_free-motion-pack/`](ep044_free-motion-pack/) | [쇼츠](https://youtube.com/shorts/_odMhLCdAc0) |
 | K01 공짜 워드 — 이력서 서식 3종 | [`k01_free-word-resume/`](k01_free-word-resume/) | (올라가면 주소 추가) |
 | K02 한글 파일 무료 — 안 열릴 때 해결표 | [`k02_hwp-free-fix/`](k02_hwp-free-fix/) | (올라가면 주소 추가) |
-| K11 엑셀 무료 — 한 달 가계부 서식 | [`k11_free-excel-budget/`](k11_free-excel-budget/) | (올라가면 주소 추가) |
+| K11 엑셀 무료 — 한 달 가계부 서식 | [`k11_free-excel-budget/`](k11_free-excel-budget/) | https://youtu.be/bXqkl73jKtY |
 | K13 챗GPT 무료 — 질문 예시 한 장 | [`k13_chatgpt-question-sheet/`](k13_chatgpt-question-sheet/) | (올라가면 주소 추가) |
 
 ## 라이선스
