@@ -27,7 +27,7 @@
 | K01 공짜 워드 — 이력서 서식 3종 | [`k01_free-word-resume/`](k01_free-word-resume/) | (올라가면 주소 추가) |
 | K02 한글 파일 무료 — 안 열릴 때 해결표 | [`k02_hwp-free-fix/`](k02_hwp-free-fix/) | (올라가면 주소 추가) |
 | K11 엑셀 무료 — 한 달 가계부 서식 | [`k11_free-excel-budget/`](k11_free-excel-budget/) | https://youtu.be/bXqkl73jKtY |
-| K13 챗GPT 무료 — 질문 예시 한 장 | [`k13_chatgpt-question-sheet/`](k13_chatgpt-question-sheet/) | (올라가면 주소 추가) |
+| K13 챗GPT 무료 — 질문 예시 한 장 | [`k13_chatgpt-question-sheet/`](k13_chatgpt-question-sheet/) | https://youtu.be/UbL3nwgA6DY |
 | K18 어도비·오피스 대신 무료 앱 13개 대응표 | [`k18_artcraft-free-13/`](k18_artcraft-free-13/) | (올라가면 주소 추가) |
 
 ## 라이선스
