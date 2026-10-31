@@ -29,7 +29,7 @@
 | K11 엑셀 무료 — 한 달 가계부 서식 | [`k11_free-excel-budget/`](k11_free-excel-budget/) | https://youtu.be/bXqkl73jKtY |
 | K13 챗GPT 무료 — 질문 예시 한 장 | [`k13_chatgpt-question-sheet/`](k13_chatgpt-question-sheet/) | https://youtu.be/UbL3nwgA6DY |
 | K16 컴퓨터 카톡 — 순서·단축키 한 장 | [`k16_kakaotalk-pc-sheet/`](k16_kakaotalk-pc-sheet/) | https://youtu.be/FgOBHp4EUag |
-| K18 어도비·오피스 대신 무료 앱 13개 대응표 | [`k18_artcraft-free-13/`](k18_artcraft-free-13/) | (올라가면 주소 추가) |
+| K18 어도비·오피스 대신 무료 앱 13개 대응표 | [`k18_artcraft-free-13/`](k18_artcraft-free-13/) | https://youtu.be/TcXwAn5SreY |
 
 ## 라이선스
 - 코드(json·스크립트): [MIT](LICENSE)
